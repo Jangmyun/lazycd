@@ -106,6 +106,9 @@ func (gui *Gui) keybindings() error {
 	if err := gui.g.SetKeybinding("", 'q', gocui.ModNone, failQuit); err != nil {
 		return err
 	}
+	if err := gui.g.SetKeybinding("", '?', gocui.ModNone, gui.toggleHelp); err != nil {
+		return err
+	}
 	
 	// Tab to switch views
 	if err := gui.g.SetKeybinding("", gocui.KeyTab, gocui.ModNone, gui.nextView); err != nil {
@@ -140,6 +143,49 @@ func failQuit(g *gocui.Gui, v *gocui.View) error {
 	return gocui.ErrQuit
 }
 
+func (gui *Gui) toggleHelp(g *gocui.Gui, v *gocui.View) error {
+	_, err := g.View("help")
+	if err == nil {
+		return g.DeleteView("help")
+	}
+
+	maxX, maxY := g.Size()
+	
+	// Centered modal
+	v, err = g.SetView("help", maxX/6, maxY/6, maxX*5/6, maxY*5/6, 0)
+	if err != nil && err != gocui.ErrUnknownView {
+		return err
+	}
+	v.Title = " Help (Close: ?) "
+	
+	fmt.Fprintln(v, "Global Keys:")
+	fmt.Fprintln(v, "  Tab: Switch View (Browser <-> Shelf)")
+	fmt.Fprintln(v, "  ?: Toggle Help")
+	fmt.Fprintln(v, "  u: Undo last job")
+	fmt.Fprintln(v, "  q: Quit")
+	fmt.Fprintln(v, "")
+	fmt.Fprintln(v, "Browser Keys:")
+	fmt.Fprintln(v, "  j/k/Down/Up: Navigation")
+	fmt.Fprintln(v, "  l/Right: Enter Directory")
+	fmt.Fprintln(v, "  h/Left: Parent Directory")
+	fmt.Fprintln(v, "  Space: Multi-select")
+	fmt.Fprintln(v, "  a: Add to Shelf")
+	fmt.Fprintln(v, "  t: Set Target")
+	fmt.Fprintln(v, "")
+	fmt.Fprintln(v, "Shelf Keys:")
+	fmt.Fprintln(v, "  y: Set mode to Copy")
+	fmt.Fprintln(v, "  x: Set mode to Move")
+	fmt.Fprintln(v, "  r: Remove from Shelf")
+	fmt.Fprintln(v, "  d: Delete items")
+	fmt.Fprintln(v, "  p: Put items to Target")
+
+	if _, err := g.SetCurrentView("help"); err != nil {
+		return err
+	}
+	
+	return nil
+}
+
 func (gui *Gui) updateStatus() {
 	v, err := gui.g.View("status")
 	if err != nil {
@@ -153,5 +199,5 @@ func (gui *Gui) updateStatus() {
 		target = "(none)"
 	}
 	
-	fmt.Fprintf(v, " CWD: %s | Target: %s | Tab: Switch View | q: Quit", cwd, target)
+	fmt.Fprintf(v, " CWD: %s | Target: %s | Tab: Switch View | ?: Help | q: Quit", cwd, target)
 }

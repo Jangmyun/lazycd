@@ -16,6 +16,8 @@ type Gui struct {
 
 	Browser *Browser
 	Shelf   *Shelf
+	
+	ShowDetails bool
 }
 
 func NewGui(state *store.State, jobMgr *core.JobManager) *Gui {
@@ -58,9 +60,37 @@ func (gui *Gui) Run() error {
 
 func (gui *Gui) layout(g *gocui.Gui) error {
 	maxX, maxY := g.Size()
+	
+	// Status view is always at bottom 2 lines
+	statusTop := maxY - 2
+	statusBottom := maxY
+
+	// Calculate main view area
+	mainBottom := statusTop
+	
+	if gui.ShowDetails {
+		// If details are shown, reserve space above status
+		// Let's say details take 6 lines
+		detailsHeight := 6
+		detailsTop := statusTop - detailsHeight
+		detailsBottom := statusTop
+		
+		mainBottom = detailsTop
+		
+		if v, err := g.SetView("details", 0, detailsTop, maxX-1, detailsBottom, 0); err != nil {
+			if err != gocui.ErrUnknownView {
+				return err
+			}
+			v.Title = " Details "
+			v.Wrap = true
+			gui.updateDetails(v)
+		}
+	} else {
+		g.DeleteView("details")
+	}
 
 	// Browser view (Left)
-	if v, err := g.SetView("browser", 0, 0, maxX/2-1, maxY-2, 0); err != nil {
+	if v, err := g.SetView("browser", 0, 0, maxX/2-1, mainBottom, 0); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
 		}
@@ -77,7 +107,7 @@ func (gui *Gui) layout(g *gocui.Gui) error {
 	}
 
 	// Shelf view (Right)
-	if v, err := g.SetView("shelf", maxX/2, 0, maxX-1, maxY-2, 0); err != nil {
+	if v, err := g.SetView("shelf", maxX/2, 0, maxX-1, mainBottom, 0); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
 		}
@@ -85,7 +115,7 @@ func (gui *Gui) layout(g *gocui.Gui) error {
 	}
 
 	// Status view (Bottom)
-	if v, err := g.SetView("status", 0, maxY-2, maxX-1, maxY, 0); err != nil {
+	if v, err := g.SetView("status", 0, statusTop, maxX-1, statusBottom, 0); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
 		}
@@ -177,6 +207,7 @@ func (gui *Gui) toggleHelp(g *gocui.Gui, v *gocui.View) error {
 	fmt.Fprintln(v, "  a: Add to Shelf")
 	fmt.Fprintln(v, "  t: Set Target")
 	fmt.Fprintln(v, "  .: Toggle Hidden Files")
+	fmt.Fprintln(v, "  Enter: Toggle Details")
 	fmt.Fprintln(v, "")
 	fmt.Fprintln(v, "Shelf Keys:")
 	fmt.Fprintln(v, "  y: Set mode to Copy")
@@ -206,4 +237,29 @@ func (gui *Gui) updateStatus() {
 	}
 	
 	fmt.Fprintf(v, " CWD: %s | Target: %s | Tab: Switch View | ?: Help | q: Quit", cwd, target)
+}
+
+func (gui *Gui) updateDetails(v *gocui.View) {
+	v.Clear()
+	
+	// Get current file from Browser
+	// We need to access Browser's current item. 
+	// But Browser.currentItem takes a View. We can get "browser" view from g.
+	bv, err := gui.g.View("browser")
+	if err != nil {
+		fmt.Fprintln(v, "No selection")
+		return
+	}
+	
+	item := gui.Browser.currentItem(bv)
+	if item == nil {
+		fmt.Fprintln(v, "No selection")
+		return
+	}
+	
+	fmt.Fprintf(v, " Name: %s\n", item.Name)
+	fmt.Fprintf(v, " Size: %d bytes\n", item.Size)
+	fmt.Fprintf(v, " Mode: %s\n", item.Mode)
+	fmt.Fprintf(v, " ModTime: %s\n", item.ModTime.Format("2006-01-02 15:04:05"))
+	fmt.Fprintf(v, " Path: %s\n", item.Path)
 }

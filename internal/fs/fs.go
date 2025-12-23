@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 )
 
 // FileItem represents a file or directory in the file system
@@ -16,6 +17,7 @@ type FileItem struct {
 	IsDir     bool
 	Size      int64
 	Mode      os.FileMode
+	ModTime   time.Time
 }
 
 // ListDir returns a sorted list of files in the directory.
@@ -34,11 +36,12 @@ func ListDir(path string) ([]FileItem, error) {
 	var items []FileItem
 	for _, f := range files {
 		items = append(items, FileItem{
-			Name:  f.Name(),
-			Path:  filepath.Join(resolvedPath, f.Name()),
-			IsDir: f.IsDir(),
-			Size:  f.Size(),
-			Mode:  f.Mode(),
+			Name:    f.Name(),
+			Path:    filepath.Join(resolvedPath, f.Name()),
+			IsDir:   f.IsDir(),
+			Size:    f.Size(),
+			Mode:    f.Mode(),
+			ModTime: f.ModTime(),
 		})
 	}
 

@@ -140,6 +140,9 @@ func (b *Browser) Keybindings() error {
 	if err := b.gui.g.SetKeybinding("browser", '.', gocui.ModNone, b.toggleHidden); err != nil {
 		return err
 	}
+	if err := b.gui.g.SetKeybinding("browser", gocui.KeyEnter, gocui.ModNone, b.toggleDetails); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -161,6 +164,7 @@ func (b *Browser) cursorDown(g *gocui.Gui, v *gocui.View) error {
 					return err
 				}
 			}
+			b.updateDetailsView()
 		}
 	}
 	return nil
@@ -182,6 +186,7 @@ func (b *Browser) cursorUp(g *gocui.Gui, v *gocui.View) error {
 				return err
 			}
 		}
+		b.updateDetailsView()
 	}
 	return nil
 }
@@ -231,6 +236,39 @@ func (b *Browser) toggleSelect(g *gocui.Gui, v *gocui.View) error {
 	// updateView rewrites content, so cursor might be fine conceptually but
 	// gocui view buffer is replaced. Gocui usually keeps cursor unless reset.
 	return nil
+}
+
+func (b *Browser) toggleDetails(g *gocui.Gui, v *gocui.View) error {
+	b.gui.ShowDetails = !b.gui.ShowDetails
+	// Force layout update by calling Update(?) or just refreshing?
+	// gocui doesn't have a "Relayout" method exposed easily, but Update catches it?
+	// Actually we need to delete/create views.
+	// layout() is called on every event, so just returning nil should trigger re-layout 
+	// because we are in an event handler?
+	// No, layout is called when gui needs redraw.
+	// We can use g.Update(func(g) error {}) to trigger it.
+	// Or maybe just b.gui.layout(g) is not enough because it doesn't clear old views?
+	// gocui's SetManagerFunc handles it.
+	// We might need to delete "browser" and "shelf" views so they are recreated?
+	// Or UpdateView?
+	
+	// Simplest:
+	// b.gui.g.Update(func(g *gocui.Gui) error { return nil }) might not force relayout if nothing changed?
+	// But we changed b.gui.ShowDetails.
+	// Layout function will run on next cycle.
+	return nil
+}
+
+func (b *Browser) updateDetailsView() {
+	if b.gui.ShowDetails {
+		b.gui.g.Update(func(g *gocui.Gui) error {
+			v, err := g.View("details")
+			if err == nil {
+				b.gui.updateDetails(v)
+			}
+			return nil
+		})
+	}
 }
 
 func (b *Browser) toggleHidden(g *gocui.Gui, v *gocui.View) error {

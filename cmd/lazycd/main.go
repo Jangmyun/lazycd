@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 
+	"lazycd/internal/core"
 	"lazycd/internal/store"
 	"lazycd/internal/ui"
 )
@@ -25,8 +26,15 @@ func main() {
 	}
 	state.LastDir = cwd
 
+	// Initialize Job Manager
+	jobMgr, err := core.NewJobManager()
+	if err != nil {
+		fmt.Printf("Error initializing job manager: %v\n", err)
+		os.Exit(1)
+	}
+
 	// Initialize UI
-	g := ui.NewGui(state)
+	g := ui.NewGui(state, jobMgr)
 
 	// Run UI
 	if err := g.Run(); err != nil {

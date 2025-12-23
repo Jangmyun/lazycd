@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 
+	"lazycd/internal/core"
 	"lazycd/internal/store"
 
 	"github.com/awesome-gocui/gocui"
@@ -11,14 +12,16 @@ import (
 type Gui struct {
 	g     *gocui.Gui
 	State *store.State
+	JobMgr *core.JobManager
 
 	Browser *Browser
 	Shelf   *Shelf
 }
 
-func NewGui(state *store.State) *Gui {
+func NewGui(state *store.State, jobMgr *core.JobManager) *Gui {
 	return &Gui{
-		State: state,
+		State:  state,
+		JobMgr: jobMgr,
 	}
 }
 
@@ -109,6 +112,10 @@ func (gui *Gui) keybindings() error {
 		return err
 	}
 
+	if err := gui.g.SetKeybinding("", 'u', gocui.ModNone, gui.undoLastJob); err != nil {
+		return err
+	}
+	
 	if err := gui.Browser.Keybindings(); err != nil {
 		return err
 	}

@@ -42,6 +42,21 @@ func (s *Shelf) Keybindings() error {
 	if err := s.gui.g.SetKeybinding("shelf", 'r', gocui.ModNone, s.remove); err != nil {
 		return err
 	}
+	if err := s.gui.g.SetKeybinding("shelf", 'y', gocui.ModNone, s.setModeCopy); err != nil {
+		return err
+	}
+	if err := s.gui.g.SetKeybinding("shelf", 'x', gocui.ModNone, s.setModeMove); err != nil {
+		return err
+	}
+	if err := s.gui.g.SetKeybinding("shelf", 'd', gocui.ModNone, s.executeDelete); err != nil {
+		return err
+	}
+	// 'p' is global or shelf specific? Plan says shelf item to target. Usually 'p' in browser or shelf?
+	// Plan said: "p = shelf 선택 항목을 target으로 put" (H3). Browser keybinding mentions p too.
+	// Let's bind 'p' globally or in both views that calls executePut.
+	if err := s.gui.g.SetKeybinding("", 'p', gocui.ModNone, s.executePut); err != nil {
+		return err
+	}
 	return nil
 }
 

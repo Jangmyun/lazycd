@@ -146,7 +146,12 @@ func failQuit(g *gocui.Gui, v *gocui.View) error {
 func (gui *Gui) toggleHelp(g *gocui.Gui, v *gocui.View) error {
 	_, err := g.View("help")
 	if err == nil {
-		return g.DeleteView("help")
+		if err := g.DeleteView("help"); err != nil {
+			return err
+		}
+		// Restore focus to browser (default). Ideally we track previous view but browser is fine for MVP.
+		_, err := g.SetCurrentView("browser")
+		return err
 	}
 
 	maxX, maxY := g.Size()

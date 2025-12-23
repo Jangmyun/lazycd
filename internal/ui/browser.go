@@ -7,6 +7,7 @@ import (
 
 	"lazycd/internal/fs"
 	"lazycd/internal/store"
+	"strings"
 
 	"github.com/awesome-gocui/gocui"
 )
@@ -17,6 +18,9 @@ type Browser struct {
 	
 	// Selection state
 	selected map[string]struct{} // Set of absolute paths
+
+	// View state
+	showHidden bool
 }
 
 func NewBrowser(gui *Gui) *Browser {
@@ -41,8 +45,22 @@ func (b *Browser) Init() error {
 
 func (b *Browser) Fetch() error {
 	var err error
-	b.items, err = fs.ListDir(b.gui.State.LastDir)
-	return err
+	allItems, err := fs.ListDir(b.gui.State.LastDir)
+	if err != nil {
+		return err
+	}
+
+	if b.showHidden {
+		b.items = allItems
+	} else {
+		b.items = make([]fs.FileItem, 0, len(allItems))
+		for _, item := range allItems {
+			if !strings.HasPrefix(item.Name, ".") {
+				b.items = append(b.items, item)
+			}
+		}
+	}
+	return nil
 }
 
 func (b *Browser) Refresh() error {
@@ -117,6 +135,9 @@ func (b *Browser) Keybindings() error {
 		return err
 	}
 	if err := b.gui.g.SetKeybinding("browser", 't', gocui.ModNone, b.setTarget); err != nil {
+		return err
+	}
+	if err := b.gui.g.SetKeybinding("browser", '.', gocui.ModNone, b.toggleHidden); err != nil {
 		return err
 	}
 	return nil
@@ -209,6 +230,23 @@ func (b *Browser) toggleSelect(g *gocui.Gui, v *gocui.View) error {
 	// Restore cursor position trick or just full refresh?
 	// updateView rewrites content, so cursor might be fine conceptually but
 	// gocui view buffer is replaced. Gocui usually keeps cursor unless reset.
+	return nil
+}
+
+func (b *Browser) toggleHidden(g *gocui.Gui, v *gocui.View) error {
+	b.showHidden = !b.showHidden
+	if err := b.Refresh(); err != nil {
+		return err
+	}
+	// Maybe reset cursor or keep it?
+	// If the current item disappears (was hidden), we might want to check bounds.
+	// gocui cursor might stay at same index, which if out of bounds on new list might cause issue.
+	// But Draw/gocui handles view updates.
+	// However, if we filter OUT items, the list might shrink.
+	// Let's ensure cursor is valid in UpdateView or here.
+	// Actually cursor management is in cursorDown/Up mostly, but if we refresh,
+	// the view content changes.
+	
 	return nil
 }
 

@@ -176,6 +176,7 @@ func (gui *Gui) toggleHelp(g *gocui.Gui, v *gocui.View) error {
 	fmt.Fprintln(v, "  Space: Multi-select")
 	fmt.Fprintln(v, "  a: Add to Shelf")
 	fmt.Fprintln(v, "  t: Set Target")
+	fmt.Fprintln(v, "  .: Toggle Hidden Files")
 	fmt.Fprintln(v, "")
 	fmt.Fprintln(v, "Shelf Keys:")
 	fmt.Fprintln(v, "  y: Set mode to Copy")
